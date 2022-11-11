@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Esri Leaflet Quickstart</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="fontawesome/css/all.css" />
+  <!-- Google Fonts Roboto -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" />
+  <!-- MDB -->
+  <link rel="stylesheet" href="css/mdb.min.css" />
+  <!-- Custom styles -->
+  <link rel="stylesheet" href="css/admin.css" />
+  <link rel="stylesheet" href="http://code.ionicframework.com/ionicons/1.5.2/css/ionicons.min.css">
+  <link rel="stylesheet" href="dist/leaflet.awesome-markers.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/esri-leaflet-geocoder/dist/esri-leaflet-geocoder.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.0/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-responsive-popup@0.6.4/leaflet.responsive.popup.rtl.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet-src.js"></script>
+  <script src="https://unpkg.com/esri-leaflet"></script>
+  <script src="https://unpkg.com/esri-leaflet-geocoder"></script>
+  <script src="https://kit.fontawesome.com/f69f65381e.js" crossorigin="anonymous"></script>
+  <script src="dist/leaflet.awesome-markers.js"></script>
+  <script src="https://unpkg.com/leaflet-responsive-popup@0.6.4/leaflet.responsive.popup.js"></script>
+</head>
+<style>
+    body { margin:0; padding:0; }
+    #map {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+       
+      }
+      .navBtn{
+        position: fixed;
+        z-index: 9999999;
+        width: 180px;
+        height: 30px;
+        display: flex;
+        margin-top: 130px;
+        margin-left: 10px;
+        flex-direction: column;
+        
+      }
+      button:nth-child(2)
+      {
+        margin-top: 10px;
+      }
+      span{
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 15px;
+      }
+</style>
+<body>
+
+<div id="map"></div>
+
+<!-- <table>
+  <thead>
+      <th>No.</th>
+      <th>StoreName</th>
+      <th>Address</th>
+      <th>ContNo.</th>
+      <th>Lati</th>
+      <th>Long</th>
+  </thead>
+  <tbody id="tbody1"></tbody>
+</table> -->
+
+<div class="navBtn">
+    <button onclick="showClinic()" class="btn btn-primary btn-rounded showClinics">Show Clinic</button>
+    <button  onclick="showVetStore()" class="btn btn-info btn-rounded showVetStore">Show VetStore</button>
+</div>
+<!--Firestore Libraries-->
+<script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-firestore.js"></script>
+<script type="text/javascript" src="js/mdb.min.js"></script>
+  <!-- Custom scripts -->
+  
+<script>
+
+      // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyDf1qwBedeofCuFM_B81-qiG7cn90N01_c",
+    authDomain: "tigomdatabase.firebaseapp.com",
+    databaseURL: "https://tigomdatabase-default-rtdb.firebaseio.com",
+    projectId: "tigomdatabase",
+    storageBucket: "tigomdatabase.appspot.com",
+    messagingSenderId: "109845825628",
+    appId: "1:109845825628:web:7c270a16336ca7f094fe99",
+    measurementId: "G-7M138X36B5"
+  };
+
+    firebase.initializeApp(firebaseConfig);
+    let db = firebase.firestore();
+    
+    //---------------FETCH DATA------------------//
+
+      // function GetAllDatafrmPetStore(){
+      //   db.collection("PetStore").get().then((queryPetstore)=>{
+      //     var petstore = [];
+      //     queryPetstore.forEach(doc => {
+      //       petstore.push(doc.data());
+      //     });
+      //     console.log(petstore);
+      //     AddAllItemsToTheTable(petstore);
+      //   });
+      // }
+
+      function GetAllDataRealTime(){
+        db.collection("PetStore").onSnapshot((queryPetstore)=>{
+          var petstore = [];
+          queryPetstore.forEach(doc => {
+            petstore.push(doc.data());
+          });
+          console.log(petstore);
+          AddAllItemsToTheTable(petstore);
+        });
+        db.collection("VetClinic").onSnapshot((queryVetclinic)=>{
+          var vetclinic = [];
+          queryVetclinic.forEach(doc => {
+            vetclinic.push(doc.data());
+          });
+          AddAllItemsToTheTables(vetclinic);
+          console.log(vetclinic);
+        });
+      }
+
+
+      // ------------------ POP UP ICONS --------------//
+      var storeMarkerRed = L.AwesomeMarkers.icon({
+       icon: 'store',
+       prefix: 'fa',
+       markerColor: 'red'
+    });
+      var ClinicYellow = L.AwesomeMarkers.icon({
+       icon: 'clinic-medical',
+       prefix: 'fa',
+       markerColor: 'orange'
+    });
+
+    //------FUNCTION THAT WILL PLOT THE THE COORDINATES IN MAP ---//
+      function AddAllItemsToTheTable(PetstoreList){
+        
+        PetstoreList.forEach(element => {
+          
+          var popup = L.responsivePopup().setContent('<div class="card" style="width: 18rem;"><img src="img/bg-img.png" class="card-img-top"/><div class="card-body"><h5 class="card-title">'+ element.petstoreName  +'</h5></div><ul class="list-group list-group-light list-group-small"><li class="list-group-item px-4">'+  '<i class="fas fa-map-marker-alt">&nbsp;&nbsp;'+ '<span>' + element.petstoreAddress +'</span>'  +'</i>'+'</li><li class="list-group-item px-4">'+ '<i class="fas fa-phone">&nbsp;&nbsp;'+ '<span>'+element.petstoreContNumber + '</span>'  +'</i>'+'</li></ul>');
+          L.marker([element.petstoreLati,element.petstoreLong], { icon: storeMarkerRed }).addTo(map).bindPopup(popup);
+
+
+        })
+      }
+      function AddAllItemsToTheTables(ClinicList){
+        
+        ClinicList.forEach(elementss => {
+          
+          var popup = L.responsivePopup().setContent('<div class="card" style="width: 18rem;"><img src="img/bg-img.png" class="card-img-top"/><div class="card-body"><h5 class="card-title">'+ elementss.clinicName  +'</h5></div><ul class="list-group list-group-light list-group-small"><li class="list-group-item px-4">'+  '<i class="fas fa-map-marker-alt">&nbsp;&nbsp;'+ '<span>' + elementss.clinicAddress +'</span>'  +'</i>'+'</li><li class="list-group-item px-4">'+ '<i class="fas fa-phone">&nbsp;&nbsp;'+ '<span>'+elementss.clinicContNumber + '</span>'  +'</i>'+'</li></ul>');
+          L.marker([elementss.clinicLati,elementss.clinicLong], { icon: ClinicYellow }).addTo(map).bindPopup(popup);
+
+
+        })
+      }
+
+
+
+      window.onload = GetAllDataRealTime;
+
+
+  var map = L.map('map').setView([10.3157, 123.8854], 15);
+  var tiles = L.esri.basemapLayer("Streets").addTo(map);
+
+  var searchControl = L.esri.Geocoding.geosearch({
+        providers: [
+          L.esri.Geocoding.arcgisOnlineProvider({
+            // API Key to be passed to the ArcGIS Online Geocoding Service
+            apikey: 'AAPKde2ce37b9bfd447db98e9295570ec526wU8Rrb_X8G5YxJnBkzt2PxGASOjxUqJv8UbqMCLj0RDuZ6RoYuUMcikJCYnoMiMV'
+          })
+        ]
+      }).addTo(map);
+
+
+
+    
+    var storeMarkerBlue = L.AwesomeMarkers.icon({
+       icon: 'store',
+       prefix: 'fa',
+       markerColor: 'blue'
+    });
+    var storeMarkerRed = L.AwesomeMarkers.icon({
+       icon: 'store',
+       prefix: 'fa',
+       markerColor: 'red'
+    });
+    var ClinicYellow = L.AwesomeMarkers.icon({
+       icon: 'clinic-medical',
+       prefix: 'fa',
+       markerColor: 'orange'
+    });
+    //coordinates
+
+    
+    
+
+
+    function showClinic(){
+        var popup = L.responsivePopup().setContent('SAMPLE 1 PET SHOP');
+        L.marker([10.3016,123.8705], { icon: ClinicYellow }).addTo(map).bindPopup(popup);
+        var popup = L.responsivePopup().setContent('SAMPLE 1 PET SHOP');
+        L.marker([10.3016,123.8745], { icon: ClinicYellow }).addTo(map).bindPopup(popup);
+    }
+    function showVetStore(){
+        var popup = L.responsivePopup().setContent('SAMPLE 1 PET SHOP');
+    L.marker([10.2873,123.8795], { icon: storeMarkerBlue }).addTo(map).bindPopup(popup);
+
+    }
+</script>
+
+</body>
+</html>
